@@ -2,6 +2,7 @@ import json
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
 
 def create_adjacency_matrix(data):
     nodes = data['nodes']
@@ -65,6 +66,64 @@ def visualize_adjacency_matrix(adjacency_matrix):
     plt.axis('off')
     plt.show()
 
+def spectral_clustering(laplacian_matrix, num_clusters):
+    # Step 2: Compute the eigenvalues and eigenvectors
+    eigenvalues, eigenvectors = np.linalg.eigh(laplacian_matrix)
+    
+    # Step 3: Sort the eigenvalues and select the smallest k eigenvectors (excluding the zero eigenvalue)
+    idx = np.argsort(eigenvalues)[1:num_clusters+1]  # 1:num_clusters+1 to exclude the first eigenvector
+    selected_eigenvectors = eigenvectors[:, idx]
+    
+    # Step 4: Normalize the rows to have unit length
+    U = selected_eigenvectors
+    norm = np.linalg.norm(U, axis=1)
+    U_normalized = U / norm[:, np.newaxis]
+    
+    # Step 5: Cluster the points using K-means on the rows of U
+    kmeans = KMeans(n_clusters=num_clusters)
+    kmeans.fit(U_normalized)
+    labels = kmeans.labels_
+    
+    return labels
+
+def visualize_clusters(graph, labels):
+    # Map the labels to colors for visualization
+    color_map = plt.get_cmap('viridis', np.unique(labels).size)
+    node_colors = [color_map(labels[i]) for i in range(len(labels))]
+
+    pos = nx.spring_layout(graph)
+    plt.figure(figsize=(10, 10))
+    nx.draw(graph, pos, node_color=node_colors, with_labels=True, node_size=700, edge_color='gray', width=2, font_size=15)
+    plt.title('Graph with Clustered Nodes')
+    plt.axis('off')
+    plt.show()
+
+
+def check_connectivity(laplacian_matrix):
+    # Compute eigenvalues
+    eigenvalues = np.linalg.eigvalsh(laplacian_matrix)
+    # Count the number of zero eigenvalues which indicate the number of connected components
+    num_connected_components = np.sum(np.isclose(eigenvalues, 0))
+    return num_connected_components, eigenvalues
+
+def spectral_clustering(laplacian_matrix, num_clusters):
+    eigenvalues, eigenvectors = np.linalg.eigh(laplacian_matrix)
+    idx = np.argsort(eigenvalues)[1:num_clusters+1]  # Skip the first zero eigenvalue
+    selected_eigenvectors = eigenvectors[:, idx]
+    U_normalized = selected_eigenvectors / np.linalg.norm(selected_eigenvectors, axis=1)[:, np.newaxis]
+    kmeans = KMeans(n_clusters=num_clusters)
+    kmeans.fit(U_normalized)
+    return kmeans.labels_
+
+def visualize_clusters(graph, labels):
+    pos = nx.spring_layout(graph)
+    color_map = plt.get_cmap('viridis', np.unique(labels).size)
+    node_colors = [color_map(labels[i]) for i in range(graph.number_of_nodes())]
+    plt.figure(figsize=(10, 10))
+    nx.draw(graph, pos, node_color=node_colors, with_labels=True, node_size=500, edge_color='gray', width=2, font_size=15)
+    plt.title('Graph with Clustered Nodes')
+    plt.axis('off')
+    plt.show()
 # Load JSON data
 json_file = 'friends.json'
 with open(json_file, 'r') as file:
@@ -93,3 +152,17 @@ print(fiedler_vector)
 
 visualize_adjacency_matrix(adjacency_matrix)
 visualize_bottlenecks(G, fiedler_vector)
+
+
+
+num_clusters = 4  # Number of clusters to form
+labels = spectral_clustering(laplacian_matrix, num_clusters)
+visualize_clusters(G, labels)
+
+
+num_connected_components, _ = check_connectivity(laplacian_matrix)
+print(f"Number of Connected Components: {num_connected_components}")
+
+labels = spectral_clustering(laplacian_matrix, num_connected_components)
+
+visualize_clusters(G, labels)
