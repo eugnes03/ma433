@@ -3,7 +3,6 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
-
 def create_adjacency_matrix(data):
     nodes = data['nodes']
     edges = data['edges']
@@ -124,6 +123,41 @@ def visualize_clusters(graph, labels):
     plt.title('Graph with Clustered Nodes')
     plt.axis('off')
     plt.show()
+
+
+def is_valid_coloring(graph, colors):
+    for node in range(graph.number_of_nodes()):
+        for neighbor in graph.neighbors(node):
+            if colors[node] == colors[neighbor] and colors[node] != -1:
+                return False
+    return True
+
+def chromatic_number_util(graph, colors, num_colors, node=0):
+    if node == graph.number_of_nodes():
+        return is_valid_coloring(graph, colors)
+
+    for color in range(num_colors):
+        colors[node] = color
+        if chromatic_number_util(graph, colors, num_colors, node + 1):
+            return True
+        colors[node] = -1  # Reset the color before backtracking
+    return False
+
+def find_chromatic_number(graph):
+    num_nodes = graph.number_of_nodes()
+    colors = [-1] * num_nodes
+
+    for num_colors in range(1, num_nodes + 1):
+        if chromatic_number_util(graph, colors, num_colors, 0):
+            return num_colors  # Return the minimum number of colors needed
+
+def visualize_colored_graph(graph, colors):
+    pos = nx.spring_layout(graph)
+    plt.figure(figsize=(10, 10))
+    nx.draw(graph, pos, node_color=colors, with_labels=True, node_size=500, cmap=plt.cm.viridis, edge_color='gray', width=2)
+    plt.title('Graph Coloring')
+    plt.axis('off')
+    plt.show()
 # Load JSON data
 json_file = 'friends.json'
 with open(json_file, 'r') as file:
@@ -166,3 +200,22 @@ print(f"Number of Connected Components: {num_connected_components}")
 labels = spectral_clustering(laplacian_matrix, num_connected_components)
 
 visualize_clusters(G, labels)
+
+#chromatic_num = find_chromatic_number(G)
+#colors = [-1] * G.number_of_nodes()
+#chromatic_number_util(G, colors, chromatic_num)
+#visualize_colored_graph(G, colors)
+
+matrixtest = [
+[0,1,1,1,0,0,0,0],
+[1,1,0,1,0,1,0,0],
+[1,1,0,1,0,1,0,0],
+[1,0,1,0,1,1,1,0],
+[0,1,0,1,0,0,1,1],
+[0,0,1,1,0,0,1,1],
+[0,0,0,1,1,1,0,1],
+[0,0,0,0,1,1,1,0]
+]
+eigenvalues1, eigenvectors1 = np.linalg.eigh(matrixtest)
+
+print(eigenvalues1)
